@@ -9,8 +9,10 @@ import json
 import os
 import threading
 import time
+import re
 
 import requests
+import random
 
 from bridge.context import *
 from bridge.reply import *
@@ -210,8 +212,20 @@ class WechatChannel(ChatChannel):
     def send(self, reply: Reply, context: Context):
         receiver = context["receiver"]
         if reply.type == ReplyType.TEXT:
-            itchat.send(reply.content, toUserName=receiver)
-            logger.info("[WX] sendMsg={}, receiver={}".format(reply, receiver))
+            split_punctuation = ['//n']
+        # 创建一个正则表达式模式，用来分割消息，确保正确处理 '||<'
+            pattern = '|'.join(map(lambda x: re.escape(x), split_punctuation))
+        # 使用正则表达式来分割消息
+            split_messages = re.split(pattern, reply.content)
+        # 移除空行
+            split_messages = [msg.strip() for msg in split_messages if msg.strip() != '']
+            
+            for msg in split_messages:
+            # 发送消息
+                    itchat.send(msg, toUserName=receiver)
+                    logger.info("[WX] sendMsg={}, receiver={}".format(msg, receiver))
+       #    itchat.send(reply.content, toUserName=receiver)
+    #    logger.info("[WX] sendMsg={}, receiver={}".format(reply, receiver))
         elif reply.type == ReplyType.ERROR or reply.type == ReplyType.INFO:
             itchat.send(reply.content, toUserName=receiver)
             logger.info("[WX] sendMsg={}, receiver={}".format(reply, receiver))
